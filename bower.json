@@ -11,7 +11,8 @@
     "purescript-canvas": "^2.0.0",
     "purescript-st": "^2.0.0",
     "purescript-partial": "^1.2.0",
-    "purescript-integers": "^2.1.1"
+    "purescript-integers": "^2.1.1",
+    "purescript-js-timers": "^2.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^2.0.0"
