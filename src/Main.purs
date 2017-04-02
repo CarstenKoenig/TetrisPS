@@ -15,8 +15,7 @@ import DOM.HTML (window)
 import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Foldable (for_)
-import Data.Generic (GenericSpine(..))
-import Data.Int (toNumber)
+import Data.Int (floor, toNumber)
 import Data.Maybe (Maybe(Just))
 import Graphics.Canvas (CANVAS, CanvasElement, Context2D, ScaleTransform, fillPath, fillRect, getCanvasElementById, getCanvasHeight, getCanvasWidth, getContext2D, rect, scale, setFillStyle, setLineWidth, setStrokeStyle, strokePath)
 import Partial.Unsafe (unsafePartial)
@@ -36,38 +35,76 @@ type FallingTetromino =
 type Tetromino =
   { blocks :: Array Coord
   , color :: String
+  , center :: CoordN
   }
 
 
-tetromino :: String -> Array Coord -> Tetromino
-tetromino col bls = { blocks: bls, color: col }
+tetromino :: String -> CoordN -> Array Coord -> Tetromino
+tetromino col cen bls = { blocks: bls, color: col, center: cen }
 
 
 tetrominoT :: Tetromino
 tetrominoT = 
-  tetromino "#0000FF" $
+  tetromino "#0000FF" (coordN 0.0 0.0) $
   [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
 
 
 tetrominoO :: Tetromino
 tetrominoO = 
-  tetromino "#00FF00" $
+  tetromino "#00FF00" (coordN 0.5 0.5) $
   [ coord 0 0, coord 1 0, coord 0 1, coord 1 1 ]
 
 
 tetrominoL :: Tetromino
 tetrominoL = 
-  tetromino "#FF0000" $
+  tetromino "#FF0000" (coordN 0.0 1.0) $
   [ coord 0 0, coord 0 1, coord 0 2, coord 1 2 ]
 
 
 type Coord = 
   { x :: Int
   , y :: Int
-  }  
+  }
+
+
+type CoordN = 
+  { x :: Number
+  , y :: Number
+  }    
+
 
 coord :: Int -> Int -> Coord
-coord x y = { x: x, y: y }  
+coord x y = { x: x, y: y }
+
+
+coordN :: Number -> Number -> CoordN
+coordN x y = { x: x, y: y }
+
+
+toCoord :: CoordN -> Coord
+toCoord c = coord (floor c.x) (floor c.y)
+
+
+toCoordN :: Coord -> CoordN
+toCoordN c = coordN (toNumber c.x) (toNumber c.y)
+
+
+rotate90at :: CoordN -> Coord -> Coord
+rotate90at { x:cx, y:cy } = 
+  toCoord <<< 
+  translate (coordN cx cy) <<< rotate90 <<< translate (coordN (-cx) (-cy)) <<< 
+  toCoordN
+
+
+translate :: CoordN -> CoordN -> CoordN 
+translate { x: tx, y: ty } { x: x, y: y } = 
+  coordN (x+tx) (y+ty)
+
+
+rotate90 :: CoordN -> CoordN
+rotate90 { x:x, y:y } = 
+  coordN (-y) x
+
 
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
@@ -116,12 +153,17 @@ drop :: FallingTetromino -> FallingTetromino
 drop fblock = 
   fblock { coord = fblock.coord { y = fblock.coord.y + 1 } }
 
+
+rotateTetromino :: FallingTetromino -> FallingTetromino
+rotateTetromino ftetr = 
+  ftetr { tetromino { blocks = rotate90at ftetr.tetromino.center <$> ftetr.tetromino.blocks  } } 
+
 moveRight :: FallingTetromino -> FallingTetromino
 moveRight fblock = 
   fblock { coord = fblock.coord { x = fblock.coord.x + 1 } }
 
 moveLeft :: FallingTetromino -> FallingTetromino
-moveLeft fblock = 
+moveLeft fblock =
   fblock { coord = fblock.coord { x = fblock.coord.x - 1 } }
 
 
@@ -147,6 +189,9 @@ onKeyPress ctx game event = do
       drawGame ctx game
     Right "ArrowDown" -> do
       modifySTRef game.fallingTetromino drop
+      drawGame ctx game
+    Right "ArrowUp" -> do
+      modifySTRef game.fallingTetromino rotateTetromino      
       drawGame ctx game
     _ -> 
       pure unit
