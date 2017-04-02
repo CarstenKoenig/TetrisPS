@@ -22,18 +22,23 @@ import Partial.Unsafe (unsafePartial)
 
 
 type GameState s =
-  { fallingBlock :: STRef s FallingBlock
+  { fallingBlock :: STRef s FallingTetromino
   }
 
 
-type FallingBlock = 
-  { block :: Block
+type FallingTetromino = 
+  { block :: Tetromino
   , coord :: Coord
   }
 
 
-type Block = 
+type Tetromino = 
   Array Coord
+
+
+tetrominoT :: Tetromino
+tetrominoT = 
+  [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
 
 
 type Coord = 
@@ -41,11 +46,12 @@ type Coord =
   , y :: Int
   }  
 
+coord :: Int -> Int -> Coord
+coord x y = { x: x, y: y }  
+
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
-  let coord x y = { x: x, y: y }
-  let block = [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
-  fblock <- newSTRef { block: block, coord: coord 5 0 }
+  fblock <- newSTRef { block: tetrominoT, coord: coord 5 0 }
   pure { fallingBlock: fblock }
 
 
@@ -58,13 +64,13 @@ drawGame ctx game = do
   drawFalling ctx block
 
 
-drawFalling :: forall e. Context2D -> FallingBlock -> Eff ( canvas :: CANVAS | e ) Unit               
+drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
 drawFalling ctx block = do
-    let draw coord = 
+    let draw {x: x, y: y} = 
           strokePath ctx $
           fillPath ctx $ rect ctx
-            { x: toNumber (coord.x + block.coord.x)
-            , y: toNumber (coord.y + block.coord.y)
+            { x: toNumber (x + block.coord.x)
+            , y: toNumber (y + block.coord.y)
             , w: 1.0
             , h: 1.0
             }
@@ -86,15 +92,15 @@ loop ctx game = do
   drawGame ctx game
 
 
-drop :: FallingBlock -> FallingBlock
+drop :: FallingTetromino -> FallingTetromino
 drop fblock = 
   fblock { coord = fblock.coord { y = fblock.coord.y + 1 } }
 
-moveRight :: FallingBlock -> FallingBlock
+moveRight :: FallingTetromino -> FallingTetromino
 moveRight fblock = 
   fblock { coord = fblock.coord { x = fblock.coord.x + 1 } }
 
-moveLeft :: FallingBlock -> FallingBlock
+moveLeft :: FallingTetromino -> FallingTetromino
 moveLeft fblock = 
   fblock { coord = fblock.coord { x = fblock.coord.x - 1 } }
 
