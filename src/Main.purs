@@ -15,6 +15,7 @@ import DOM.HTML (window)
 import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Foldable (for_)
+import Data.Generic (GenericSpine(..))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
 import Graphics.Canvas (CANVAS, CanvasElement, Context2D, ScaleTransform, fillPath, fillRect, getCanvasElementById, getCanvasHeight, getCanvasWidth, getContext2D, rect, scale, setFillStyle, setLineWidth, setStrokeStyle, strokePath)
@@ -32,19 +33,32 @@ type FallingTetromino =
   }
 
 
-type Tetromino = 
-  Array Coord
+type Tetromino =
+  { blocks :: Array Coord
+  , color :: String
+  }
+
+
+tetromino :: String -> Array Coord -> Tetromino
+tetromino col bls = { blocks: bls, color: col }
 
 
 tetrominoT :: Tetromino
 tetrominoT = 
+  tetromino "#0000FF" $
   [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
 
 
 tetrominoO :: Tetromino
 tetrominoO = 
+  tetromino "#00FF00" $
   [ coord 0 0, coord 1 0, coord 0 1, coord 1 1 ]
 
+
+tetrominoL :: Tetromino
+tetrominoL = 
+  tetromino "#FF0000" $
+  [ coord 0 0, coord 0 1, coord 0 2, coord 1 2 ]
 
 
 type Coord = 
@@ -57,7 +71,7 @@ coord x y = { x: x, y: y }
 
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
-  tetr <- newSTRef { tetromino: tetrominoO, coord: coord 5 0 }
+  tetr <- newSTRef { tetromino: tetrominoL, coord: coord 5 0 }
   pure { fallingTetromino: tetr }
 
 
@@ -80,10 +94,10 @@ drawFalling ctx tetr = do
             , w: 1.0
             , h: 1.0
             }
-    setFillStyle "#0000FF" ctx
     setStrokeStyle "#000000" ctx
     setLineWidth 0.1 ctx
-    for_ tetr.tetromino draw
+    setFillStyle tetr.tetromino.color ctx
+    for_ tetr.tetromino.blocks draw
     pure unit
   
 
