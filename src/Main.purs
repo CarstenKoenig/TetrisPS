@@ -14,16 +14,11 @@ import DOM.Event.Types (EventType(EventType))
 import DOM.HTML (window)
 import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
+import Data.Foldable (for_)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
-import Graphics.Canvas (fillRect, Context2D, CanvasElement, ScaleTransform, CANVAS, scale, rect, fillPath, setFillStyle, getContext2D, getCanvasElementById, getCanvasHeight, getCanvasWidth)
+import Graphics.Canvas (CANVAS, CanvasElement, Context2D, ScaleTransform, fillPath, fillRect, getCanvasElementById, getCanvasHeight, getCanvasWidth, getContext2D, rect, scale, setFillStyle, setLineWidth, setStrokeStyle, strokePath)
 import Partial.Unsafe (unsafePartial)
-
-
-type FallingBlock = 
-  { posX :: Int
-  , posY :: Int
-  }
 
 
 type GameState s =
@@ -31,15 +26,32 @@ type GameState s =
   }
 
 
+type FallingBlock = 
+  { block :: Block
+  , coord :: Coord
+  }
+
+
+type Block = 
+  Array Coord
+
+
+type Coord = 
+  { x :: Int
+  , y :: Int
+  }  
+
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
-  block <- newSTRef { posX: 5, posY: 0 }
-  pure { fallingBlock: block }
+  let coord x y = { x: x, y: y }
+  let block = [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
+  fblock <- newSTRef { block: block, coord: coord 5 0 }
+  pure { fallingBlock: fblock }
 
 
 drawGame :: forall e s. Context2D -> GameState s -> Eff (canvas :: CANVAS, st :: ST s | e) Unit
 drawGame ctx game = do
-  setFillStyle "#000000" ctx
+  setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
 
   block <- readSTRef game.fallingBlock
@@ -48,13 +60,18 @@ drawGame ctx game = do
 
 drawFalling :: forall e. Context2D -> FallingBlock -> Eff ( canvas :: CANVAS | e ) Unit               
 drawFalling ctx block = do
+    let draw coord = 
+          strokePath ctx $
+          fillPath ctx $ rect ctx
+            { x: toNumber (coord.x + block.coord.x)
+            , y: toNumber (coord.y + block.coord.y)
+            , w: 1.0
+            , h: 1.0
+            }
     setFillStyle "#0000FF" ctx
-    fillPath ctx $ rect ctx
-      { x: toNumber block.posX
-      , y: toNumber block.posY
-      , w: 1.0
-      , h: 1.0
-      }
+    setStrokeStyle "#000000" ctx
+    setLineWidth 0.1 ctx
+    for_ block.block draw
     pure unit
   
 
@@ -70,13 +87,16 @@ loop ctx game = do
 
 
 drop :: FallingBlock -> FallingBlock
-drop block = block { posY = block.posY + 1 }  
+drop fblock = 
+  fblock { coord = fblock.coord { y = fblock.coord.y + 1 } }
 
 moveRight :: FallingBlock -> FallingBlock
-moveRight block = block { posX = block.posX + 1 }
+moveRight fblock = 
+  fblock { coord = fblock.coord { x = fblock.coord.x + 1 } }
 
 moveLeft :: FallingBlock -> FallingBlock
-moveLeft block = block { posX = block.posX - 1 }
+moveLeft fblock = 
+  fblock { coord = fblock.coord { x = fblock.coord.x - 1 } }
 
 
 initializeInput :: forall s e. Context2D -> GameState s -> Eff ( dom :: DOM, st :: ST s, canvas :: CANVAS | e) Unit
