@@ -22,12 +22,12 @@ import Partial.Unsafe (unsafePartial)
 
 
 type GameState s =
-  { fallingBlock :: STRef s FallingTetromino
+  { fallingTetromino :: STRef s FallingTetromino
   }
 
 
 type FallingTetromino = 
-  { block :: Tetromino
+  { tetromino :: Tetromino
   , coord :: Coord
   }
 
@@ -41,6 +41,12 @@ tetrominoT =
   [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
 
 
+tetrominoO :: Tetromino
+tetrominoO = 
+  [ coord 0 0, coord 1 0, coord 0 1, coord 1 1 ]
+
+
+
 type Coord = 
   { x :: Int
   , y :: Int
@@ -51,8 +57,8 @@ coord x y = { x: x, y: y }
 
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
-  fblock <- newSTRef { block: tetrominoT, coord: coord 5 0 }
-  pure { fallingBlock: fblock }
+  tetr <- newSTRef { tetromino: tetrominoO, coord: coord 5 0 }
+  pure { fallingTetromino: tetr }
 
 
 drawGame :: forall e s. Context2D -> GameState s -> Eff (canvas :: CANVAS, st :: ST s | e) Unit
@@ -60,24 +66,24 @@ drawGame ctx game = do
   setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
 
-  block <- readSTRef game.fallingBlock
+  block <- readSTRef game.fallingTetromino
   drawFalling ctx block
 
 
 drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
-drawFalling ctx block = do
+drawFalling ctx tetr = do
     let draw {x: x, y: y} = 
           strokePath ctx $
           fillPath ctx $ rect ctx
-            { x: toNumber (x + block.coord.x)
-            , y: toNumber (y + block.coord.y)
+            { x: toNumber (x + tetr.coord.x)
+            , y: toNumber (y + tetr.coord.y)
             , w: 1.0
             , h: 1.0
             }
     setFillStyle "#0000FF" ctx
     setStrokeStyle "#000000" ctx
     setLineWidth 0.1 ctx
-    for_ block.block draw
+    for_ tetr.tetromino draw
     pure unit
   
 
@@ -88,7 +94,7 @@ initializeLoop ctx game = do
 
 loop :: forall e s. Context2D -> GameState s -> Eff (st :: ST s, canvas :: CANVAS | e) Unit
 loop ctx game = do
-  modifySTRef game.fallingBlock drop
+  modifySTRef game.fallingTetromino drop
   drawGame ctx game
 
 
@@ -120,13 +126,13 @@ onKeyPress :: forall eff s. Context2D -> GameState s -> Event -> Eff ( st :: ST 
 onKeyPress ctx game event = do
   case map code (runExcept (eventToKeyboardEvent event)) of
     Right "ArrowLeft" -> do
-      modifySTRef game.fallingBlock moveLeft
+      modifySTRef game.fallingTetromino moveLeft
       drawGame ctx game
     Right "ArrowRight" -> do
-      modifySTRef game.fallingBlock moveRight
+      modifySTRef game.fallingTetromino moveRight
       drawGame ctx game
     Right "ArrowDown" -> do
-      modifySTRef game.fallingBlock drop
+      modifySTRef game.fallingTetromino drop
       drawGame ctx game
     _ -> 
       pure unit
