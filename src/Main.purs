@@ -14,12 +14,12 @@ import DOM.Event.Types (EventType(EventType))
 import DOM.HTML (window)
 import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
-import Data.Foldable (for_)
-import Data.Int (floor, toNumber)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
-import Graphics.Canvas (CANVAS, CanvasElement, Context2D, ScaleTransform, fillPath, fillRect, getCanvasElementById, getCanvasHeight, getCanvasWidth, getContext2D, rect, scale, setFillStyle, setLineWidth, setStrokeStyle, strokePath)
+import Graphics.Canvas (CANVAS, ScaleTransform, CanvasElement, Context2D, scale, getContext2D, getCanvasElementById, getCanvasHeight, getCanvasWidth, fillRect, setFillStyle)
 import Partial.Unsafe (unsafePartial)
-
+import Point (Point, point)
+import Tetrominos (Tetromino, rotateTetromino, drawTetromino, tetrominoL)
 
 type GameState s =
   { fallingTetromino :: STRef s FallingTetromino
@@ -28,87 +28,13 @@ type GameState s =
 
 type FallingTetromino = 
   { tetromino :: Tetromino
-  , coord :: Coord
+  , coord :: Point
   }
-
-
-type Tetromino =
-  { blocks :: Array Coord
-  , color :: String
-  , center :: CoordN
-  }
-
-
-tetromino :: String -> CoordN -> Array Coord -> Tetromino
-tetromino col cen bls = { blocks: bls, color: col, center: cen }
-
-
-tetrominoT :: Tetromino
-tetrominoT = 
-  tetromino "#0000FF" (coordN 0.0 0.0) $
-  [ coord (-1) 0, coord 0 0, coord 1 0, coord 0 1 ]
-
-
-tetrominoO :: Tetromino
-tetrominoO = 
-  tetromino "#00FF00" (coordN 0.5 0.5) $
-  [ coord 0 0, coord 1 0, coord 0 1, coord 1 1 ]
-
-
-tetrominoL :: Tetromino
-tetrominoL = 
-  tetromino "#FF0000" (coordN 0.0 1.0) $
-  [ coord 0 0, coord 0 1, coord 0 2, coord 1 2 ]
-
-
-type Coord = 
-  { x :: Int
-  , y :: Int
-  }
-
-
-type CoordN = 
-  { x :: Number
-  , y :: Number
-  }    
-
-
-coord :: Int -> Int -> Coord
-coord x y = { x: x, y: y }
-
-
-coordN :: Number -> Number -> CoordN
-coordN x y = { x: x, y: y }
-
-
-toCoord :: CoordN -> Coord
-toCoord c = coord (floor c.x) (floor c.y)
-
-
-toCoordN :: Coord -> CoordN
-toCoordN c = coordN (toNumber c.x) (toNumber c.y)
-
-
-rotate90at :: CoordN -> Coord -> Coord
-rotate90at { x:cx, y:cy } = 
-  toCoord <<< 
-  translate (coordN cx cy) <<< rotate90 <<< translate (coordN (-cx) (-cy)) <<< 
-  toCoordN
-
-
-translate :: CoordN -> CoordN -> CoordN 
-translate { x: tx, y: ty } { x: x, y: y } = 
-  coordN (x+tx) (y+ty)
-
-
-rotate90 :: CoordN -> CoordN
-rotate90 { x:x, y:y } = 
-  coordN (-y) x
 
 
 initializeGame :: forall e s. Eff ( st :: ST s | e) (GameState s)                   
 initializeGame = do
-  tetr <- newSTRef { tetromino: tetrominoL, coord: coord 5 0 }
+  tetr <- newSTRef { tetromino: tetrominoL, coord: point 5 0 }
   pure { fallingTetromino: tetr }
 
 
@@ -117,25 +43,13 @@ drawGame ctx game = do
   setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
 
-  block <- readSTRef game.fallingTetromino
-  drawFalling ctx block
+  ftetr <- readSTRef game.fallingTetromino
+  drawFalling ctx ftetr
 
 
 drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
-drawFalling ctx tetr = do
-    let draw {x: x, y: y} = 
-          strokePath ctx $
-          fillPath ctx $ rect ctx
-            { x: toNumber (x + tetr.coord.x)
-            , y: toNumber (y + tetr.coord.y)
-            , w: 1.0
-            , h: 1.0
-            }
-    setStrokeStyle "#000000" ctx
-    setLineWidth 0.1 ctx
-    setFillStyle tetr.tetromino.color ctx
-    for_ tetr.tetromino.blocks draw
-    pure unit
+drawFalling ctx ftetr =
+    drawTetromino ctx ftetr.coord ftetr.tetromino
   
 
 initializeLoop :: forall e s. Context2D -> GameState s -> Eff (timer :: TIMER, st :: ST s, canvas :: CANVAS | e) IntervalId
@@ -154,9 +68,9 @@ drop fblock =
   fblock { coord = fblock.coord { y = fblock.coord.y + 1 } }
 
 
-rotateTetromino :: FallingTetromino -> FallingTetromino
-rotateTetromino ftetr = 
-  ftetr { tetromino { blocks = rotate90at ftetr.tetromino.center <$> ftetr.tetromino.blocks  } } 
+rotateFalling :: FallingTetromino -> FallingTetromino
+rotateFalling ftetr =
+  ftetr { tetromino = rotateTetromino ftetr.tetromino } 
 
 moveRight :: FallingTetromino -> FallingTetromino
 moveRight fblock = 
@@ -191,7 +105,7 @@ onKeyPress ctx game event = do
       modifySTRef game.fallingTetromino drop
       drawGame ctx game
     Right "ArrowUp" -> do
-      modifySTRef game.fallingTetromino rotateTetromino      
+      modifySTRef game.fallingTetromino rotateFalling      
       drawGame ctx game
     _ -> 
       pure unit
