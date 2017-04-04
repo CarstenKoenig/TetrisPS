@@ -1,7 +1,6 @@
 module Main where
 
 import Prelude
-import Control.Bind ((=<<))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Timer (IntervalId, TIMER, setInterval)
@@ -17,7 +16,6 @@ import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
-import Data.Unit (Unit)
 import Game (GameState, GameSettings, moveLeft, moveRight, rotate, drawGame, initializeGame, updateMovingBlock, updateFalling)
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
 import Partial.Unsafe (unsafePartial)
@@ -53,7 +51,7 @@ main = void $ unsafePartial do
 
 initializeLoop :: forall e s. Context2D -> State s -> Eff (timer :: TIMER, st :: ST s, canvas :: CANVAS | e) IntervalId
 initializeLoop ctx state = do
-  setInterval 1000 (loop ctx state)
+  setInterval 1500 (loop ctx state)
 
 
 loop :: forall e s. Context2D -> State s -> Eff (st :: ST s, canvas :: CANVAS | e) Unit
