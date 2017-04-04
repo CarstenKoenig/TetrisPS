@@ -3,9 +3,9 @@ module Game
     , GameSettings
     , FallingTetromino 
     , initializeGame
-    , updateFallingBlock
+    , updateMovingBlock
+    , updateFalling
     , drawGame 
-    , drop 
     , rotate 
     , moveRight 
     , moveLeft
@@ -15,8 +15,7 @@ where
 import Prelude
 import Data.Map as Map
 import Control.Monad.Eff (Eff)
-import Control.Monad.ST (modifySTRef, ST, STRef, readSTRef, newSTRef)
-import Data.BooleanAlgebra (class BooleanAlgebra)
+import Control.Monad.ST (ST, STRef, newSTRef, readSTRef, writeSTRef)
 import Data.Map (Map)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
@@ -34,11 +33,37 @@ type GameSettings =
     }
 
 data GameState s =
-    GameState
-        { fallingTetromino :: STRef s FallingTetromino
+    GameState (STRef s 
+        { fallingTetromino :: FallingTetromino
         , occupied :: Map Point Color
         , settings :: GameSettings
-        }
+        })
+
+
+fallingTetromino :: forall s e. GameState s -> Eff ( st :: ST s | e) FallingTetromino
+fallingTetromino (GameState gs) = do
+    gamestate <- readSTRef gs
+    pure $ gamestate.fallingTetromino
+
+
+setFallingTetromino :: forall s e. GameState s -> FallingTetromino -> Eff ( st :: ST s | e) Unit
+setFallingTetromino (GameState gs) ftetr = do
+    gamestate <- readSTRef gs
+    let gamestate' = gamestate { fallingTetromino = ftetr }
+    writeSTRef gs gamestate'
+    pure unit
+
+
+occupied :: forall s e. GameState s -> Eff ( st :: ST s | e) (Map Point Color)
+occupied (GameState gs) = do
+    gamestate <- readSTRef gs
+    pure $ gamestate.occupied
+
+
+settings :: forall s e. GameState s -> Eff ( st :: ST s | e) GameSettings
+settings (GameState gs) = do
+    gamestate <- readSTRef gs
+    pure $ gamestate.settings
 
 
 type FallingTetromino = 
@@ -47,30 +72,66 @@ type FallingTetromino =
   }
 
 
-initializeGame :: forall e s. GameSettings -> Eff ( st :: ST s | e) (GameState s)                   
+initializeGame :: forall e s.                                                   
+  GameSettings -> Eff ( st :: ST s | e) (GameState s)                                                            
 initializeGame sets = do
-  tetr <- newSTRef { tetromino: tetrominoL, coord: point 5 (-2) }
-  pure $ GameState { fallingTetromino: tetr, settings: sets, occupied: Map.empty }
+    let ftetr = { tetromino: tetrominoL, coord: point 5 (-2) }
+    state <- newSTRef { fallingTetromino: ftetr, occupied: (Map.empty :: Map Point Color), settings: sets }
+    pure $ GameState state
 
 
-updateFallingBlock :: forall s e . GameState s -> (FallingTetromino -> FallingTetromino) -> Eff (st :: ST s | e) Unit
-updateFallingBlock (GameState gameState) update = do
-    modifySTRef gameState.fallingTetromino update'
-    pure unit
+updateMovingBlock :: forall s e . GameState s -> (FallingTetromino -> FallingTetromino) -> Eff (st :: ST s | e) Unit
+updateMovingBlock gs update = do
+    gamestate <- gameState gs
+    ftetr <- update' gamestate.fallingTetromino
+    setFallingTetromino gs ftetr  
     where 
-        update' ftetr = 
+        gameState (GameState gs) = readSTRef gs
+        update' ftetr = do
             let ftetr' = update ftetr
-            in if isValid gameState.settings ftetr' then ftetr' else ftetr
+            valid <- isValid gs ftetr'
+            pure $ if valid then ftetr' else ftetr
 
 
-isValid :: GameSettings -> FallingTetromino -> Boolean
-isValid settings ftetr = 
-    all (insideBounds settings) (points ftetr.coord ftetr.tetromino)
+updateFalling :: forall s e . GameState s -> Eff (st :: ST s | e) Unit
+updateFalling gs = do
+    gamestate <- gameState gs
+    let falling = gamestate.fallingTetromino
+    let dropped = drop falling
+    valid <- isValid gs dropped
+    if valid
+        then
+            setFallingTetromino gs dropped
+        else do
+            stopFalling gs
+            initNewFalling gs
+    where
+        gameState (GameState gs) = readSTRef gs
+                
+            
+
+stopFalling :: forall s e . GameState s -> Eff (st :: ST s | e) Unit
+stopFalling gs = pure unit
 
 
-isOccupied :: forall s. GameState s -> Point -> Boolean
-isOccupied (GameState gameState) pt = 
-    Map.member pt gameState.occupied
+initNewFalling :: forall s e . GameState s -> Eff (st :: ST s | e) Unit
+initNewFalling gs = pure unit
+
+
+isValid :: forall e s. GameState s -> FallingTetromino ->  Eff (st :: ST s | e) Boolean
+isValid gs ftetr = do
+    gamestate <- gameState gs
+    pure $ all (valid gamestate.settings gamestate.occupied) (points ftetr.coord ftetr.tetromino)
+    where 
+        gameState (GameState gs) = readSTRef gs
+        valid setts map pt =
+            insideBounds setts pt && not (isOccupied map pt)
+
+
+isOccupied :: Map Point Color -> Point -> Boolean
+isOccupied map pt =
+    Map.member pt map
+
 
 insideBounds :: GameSettings -> Point -> Boolean
 insideBounds { rows: r, cols: c } (Tuple x y) = 
@@ -79,11 +140,10 @@ insideBounds { rows: r, cols: c } (Tuple x y) =
 
 
 drawGame :: forall e s. Context2D -> GameState s -> Eff (canvas :: CANVAS, st :: ST s | e) Unit
-drawGame ctx (GameState game) = do
+drawGame ctx gs = do
   setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
-
-  ftetr <- readSTRef game.fallingTetromino
+  ftetr <- fallingTetromino gs
   drawFalling ctx ftetr
 
 

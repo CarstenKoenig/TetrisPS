@@ -16,7 +16,7 @@ import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
-import Game (GameState, GameSettings, drop, moveLeft, moveRight, rotate, drawGame, initializeGame, updateFallingBlock)
+import Game (GameState, GameSettings, moveLeft, moveRight, rotate, drawGame, initializeGame, updateMovingBlock, updateFalling)
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
 import Partial.Unsafe (unsafePartial)
 
@@ -44,7 +44,7 @@ initializeLoop ctx game = do
 
 loop :: forall e s. Context2D -> GameState s -> Eff (st :: ST s, canvas :: CANVAS | e) Unit
 loop ctx game = do
-  updateFallingBlock game drop
+  updateFalling game
   drawGame ctx game
 
 
@@ -63,16 +63,16 @@ onKeyPress :: forall eff s. Context2D -> GameState s -> Event -> Eff ( st :: ST 
 onKeyPress ctx game event = do
   case map code (runExcept (eventToKeyboardEvent event)) of
     Right "ArrowLeft" -> do
-      updateFallingBlock game moveLeft
+      updateMovingBlock game moveLeft
       drawGame ctx game
     Right "ArrowRight" -> do
-      updateFallingBlock game moveRight
+      updateMovingBlock game moveRight
       drawGame ctx game
     Right "ArrowDown" -> do
-      updateFallingBlock game drop
+      updateFalling game
       drawGame ctx game
     Right "ArrowUp" -> do
-      updateFallingBlock game rotate
+      updateMovingBlock game rotate
       drawGame ctx game
     _ -> 
       pure unit
