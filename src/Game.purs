@@ -16,12 +16,13 @@ where
 import Prelude
 import Data.Map as Map
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Random (RANDOM, randomInt)
 import Data.Map (Map)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
 import Graphics.Canvas (CANVAS, Context2D, fillRect, setFillStyle)
 import Point (Point, point)
-import Tetrominos (Tetromino, rotateTetromino, drawTetromino, tetrominoL, points)
+import Tetrominos (Tetromino, drawTetromino, points, rotateTetromino, tetrominoL, tetrominoO, tetrominoT)
 
 
 type Color = String
@@ -62,24 +63,41 @@ updateMovingBlock update gamestate =
             in if valid then ftetr' else ftetr
 
 
-updateFalling :: GameState -> GameState
-updateFalling gamestate =
+updateFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
+updateFalling gamestate = do
     let falling = gamestate.fallingTetromino
         dropped = drop falling
         valid = isValid gamestate dropped
-    in if valid
+    if valid
         then
-            gamestate { fallingTetromino = dropped }
-        else
-            (stopFalling >>> initNewFalling) gamestate
+            pure $ gamestate { fallingTetromino = dropped }
+        else do 
+            gamestate' <- initNewFalling gamestate 
+            pure $ stopFalling gamestate'
             
 
 stopFalling :: GameState -> GameState
 stopFalling gs = gs
 
 
-initNewFalling :: GameState -> GameState
-initNewFalling gs = gs
+initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
+initNewFalling gamestate = do
+    ftetr <- randomTetromino
+    pure $ gamestate { fallingTetromino = ftetr }
+
+
+randomTetromino :: forall e. Eff (random :: RANDOM | e) FallingTetromino
+randomTetromino = do 
+    n <- randomInt 1 3
+    pure $ selectTetromino n
+
+
+selectTetromino :: Int -> FallingTetromino
+selectTetromino nr = 
+    case nr of 
+        1 -> { tetromino: tetrominoL, coord: point 5 (-2) }
+        2 -> { tetromino: tetrominoT, coord: point 5 (-1) }
+        _ -> { tetromino: tetrominoO, coord: point 5 (-1) }
 
 
 isValid :: GameState -> FallingTetromino ->  Boolean

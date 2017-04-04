@@ -3,9 +3,10 @@ module Main where
 import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Timer (IntervalId, TIMER, setInterval)
 import Control.Monad.Except (runExcept)
-import Control.Monad.ST (ST, STRef, modifySTRef, newSTRef, readSTRef)
+import Control.Monad.ST (ST, STRef, modifySTRef, newSTRef, readSTRef, writeSTRef)
 import DOM (DOM)
 import DOM.Event.Event (Event)
 import DOM.Event.EventTarget (eventListener, addEventListener)
@@ -27,12 +28,19 @@ updateGame update state =
   modifySTRef state update
 
 
+updateGame' :: forall e s. (GameState -> Eff (random :: RANDOM, st :: ST s | e) GameState) -> State s -> Eff (st :: ST s, random :: RANDOM | e) GameState
+updateGame' update state = do 
+  game <- readSTRef state 
+  game' <- update game 
+  writeSTRef state game'
+
+
 getGameState :: forall e s. State s -> Eff (st :: ST s | e) GameState 
 getGameState state = 
   readSTRef state
 
 
-main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM , console :: CONSOLE| e) Unit
+main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM , console :: CONSOLE, random :: RANDOM | e) Unit
 main = void $ unsafePartial do
     let settings = { rows: 20, cols: 12}
     let game = initializeGame settings
@@ -49,18 +57,18 @@ main = void $ unsafePartial do
 
 
 
-initializeLoop :: forall e s. Context2D -> State s -> Eff (timer :: TIMER, st :: ST s, canvas :: CANVAS | e) IntervalId
+initializeLoop :: forall e s. Context2D -> State s -> Eff (timer :: TIMER, st :: ST s, canvas :: CANVAS, random :: RANDOM | e) IntervalId
 initializeLoop ctx state = do
   setInterval 1500 (loop ctx state)
 
 
-loop :: forall e s. Context2D -> State s -> Eff (st :: ST s, canvas :: CANVAS | e) Unit
+loop :: forall e s. Context2D -> State s -> Eff (st :: ST s, random :: RANDOM, canvas :: CANVAS | e) Unit
 loop ctx state = do
-  game <- updateGame updateFalling state
+  game <- updateGame' updateFalling state
   drawGame ctx game
 
 
-initializeInput :: forall s e. Context2D -> State s -> Eff ( dom :: DOM, st :: ST s, canvas :: CANVAS | e) Unit
+initializeInput :: forall s e. Context2D -> State s -> Eff ( dom :: DOM, st :: ST s, canvas :: CANVAS, random :: RANDOM | e) Unit
 initializeInput ctx state = do
   w <- window
   addEventListener 
@@ -71,7 +79,7 @@ initializeInput ctx state = do
   pure unit
 
 
-onKeyPress :: forall eff s. Context2D -> State s -> Event -> Eff ( st :: ST s, canvas :: CANVAS| eff) Unit
+onKeyPress :: forall eff s. Context2D -> State s -> Event -> Eff ( st :: ST s, random :: RANDOM, canvas :: CANVAS| eff) Unit
 onKeyPress ctx state event = do
 
   case map code (runExcept (eventToKeyboardEvent event)) of
@@ -82,7 +90,7 @@ onKeyPress ctx state event = do
       game <- updateGame (updateMovingBlock moveRight) state
       drawGame ctx game
     Right "ArrowDown" -> do
-      game <- updateGame updateFalling state
+      game <- updateGame' updateFalling state
       drawGame ctx game
     Right "ArrowUp" -> do
       game <- updateGame (updateMovingBlock rotate) state
