@@ -3,6 +3,9 @@ module Point
 , Point
 , point
 , rotate90at
+, translate
+, toPoint
+, fromPoint
 ) where
 
 import Prelude

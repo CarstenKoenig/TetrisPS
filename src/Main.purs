@@ -5,7 +5,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Timer (IntervalId, TIMER, setInterval)
 import Control.Monad.Except (runExcept)
-import Control.Monad.ST (ST, modifySTRef)
+import Control.Monad.ST (ST)
 import DOM (DOM)
 import DOM.Event.Event (Event)
 import DOM.Event.EventTarget (eventListener, addEventListener)
@@ -16,18 +16,19 @@ import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
-import Game (GameState, drop, moveLeft, moveRight, rotate, drawGame, initializeGame, updateFallingBlock)
+import Game (GameState, GameSettings, drop, moveLeft, moveRight, rotate, drawGame, initializeGame, updateFallingBlock)
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
 import Partial.Unsafe (unsafePartial)
 
 
 main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM , console :: CONSOLE| e) Unit
 main = void $ unsafePartial do
-    game <- initializeGame
+    let settings = { rows: 20, cols: 12}
+    game <- initializeGame settings
     Just canvas <- getCanvasElementById "canvas"
     ctx <- getContext2D canvas
 
-    scaling <- calculateScaling 12 20 canvas
+    scaling <- calculateScaling settings canvas
     scale scaling ctx
 
     initializeInput ctx game
@@ -78,9 +79,9 @@ onKeyPress ctx game event = do
 
 
 -- calculates a ScaleTransform so we can use 1pixel per block
-calculateScaling :: forall e. Int -> Int -> CanvasElement          
+calculateScaling :: forall e. GameSettings -> CanvasElement          
         -> Eff ( canvas :: CANVAS | e) ScaleTransform               
-calculateScaling w h canvas = do
+calculateScaling { rows: h, cols: w } canvas = do
   cW <- getCanvasWidth canvas
   cH <- getCanvasHeight canvas
   pure { scaleX: cW / (toNumber w), scaleY: cH / (toNumber h) }
