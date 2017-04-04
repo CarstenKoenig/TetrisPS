@@ -5,6 +5,7 @@ module Tetrominos
     , tetrominoL 
     , tetrominoT
     , tetrominoO
+    , points
     )
 where
 
@@ -13,7 +14,7 @@ import Control.Monad.Eff (Eff)
 import Data.Int (toNumber)
 import Data.Traversable (for_)
 import Graphics.Canvas (setFillStyle, setLineWidth, setStrokeStyle, CANVAS, Context2D, rect, fillPath, strokePath)
-import Point (Point, Coord(..), rotate90at)
+import Point (Point, Coord(..), rotate90at, toPoint, fromPoint, translate)
 
 
 type Tetromino =
@@ -44,6 +45,10 @@ tetrominoL =
 mkTetromino :: String -> Coord -> Array Coord -> Tetromino
 mkTetromino col cen bls = { blocks: bls, color: col, center: cen }
 
+
+points :: Point -> Tetromino -> Array Point
+points pt tetr =
+    map (toPoint <<< translate (fromPoint pt)) tetr.blocks
 
 rotateTetromino :: Tetromino -> Tetromino
 rotateTetromino tetr =

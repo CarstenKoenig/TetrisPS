@@ -41,7 +41,7 @@ type FallingTetromino =
 
 initializeGame :: forall e s. GameSettings -> Eff ( st :: ST s | e) (GameState s)                   
 initializeGame sets = do
-  tetr <- newSTRef { tetromino: tetrominoL, coord: point 5 0 }
+  tetr <- newSTRef { tetromino: tetrominoL, coord: point 5 (-2) }
   pure $ GameState { fallingTetromino: tetr, settings: sets }
 
 
