@@ -13,6 +13,7 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Data.Int (toNumber)
 import Data.Traversable (for_)
+import Data.Tuple (snd, fst)
 import Graphics.Canvas (setFillStyle, setLineWidth, setStrokeStyle, CANVAS, Context2D, rect, fillPath, strokePath)
 import Point (Point, Coord(..), rotate90at, toPoint, fromPoint, translate)
 
@@ -67,8 +68,8 @@ drawBlock ctx pt (Coord bx by) = do
     strokePath ctx $
     fillPath ctx $ 
     rect ctx
-        { x: toNumber pt.x + bx
-        , y: toNumber pt.y + by
+        { x: toNumber (fst pt) + bx
+        , y: toNumber (snd pt) + by
         , w: 1.0
         , h: 1.0
         }

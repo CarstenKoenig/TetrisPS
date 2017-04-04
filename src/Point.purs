@@ -10,6 +10,7 @@ module Point
 
 import Prelude
 import Data.Int (floor, toNumber)
+import Data.Tuple (snd, fst, Tuple(Tuple))
 
 
 data Coord =
@@ -17,11 +18,11 @@ data Coord =
 
 
 type Point =
-    { x :: Int, y :: Int }
+    Tuple Int Int
 
 
 point :: Int -> Int -> Point
-point x y = { x: x, y: y }    
+point = Tuple
 
 
 -- please note: mul is obviosly wrong
@@ -34,12 +35,12 @@ instance semiringCoord :: Semiring Coord where
 
 toPoint :: Coord -> Point
 toPoint (Coord x y) = 
-  { x: floor x, y: floor y }
+  Tuple (floor x) (floor y)
 
 
 fromPoint :: Point -> Coord
 fromPoint p = 
-  Coord (toNumber p.x) (toNumber p.y)
+  Coord (toNumber $ fst p) (toNumber $ snd p)
 
 
 rotate90at :: Coord -> Coord -> Coord
@@ -54,3 +55,4 @@ translate = add
 rotate90 :: Coord -> Coord
 rotate90 (Coord x y) = 
   Coord (-y) x
+

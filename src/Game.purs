@@ -13,12 +13,19 @@ module Game
 where
 
 import Prelude
+import Data.Map as Map
 import Control.Monad.Eff (Eff)
 import Control.Monad.ST (modifySTRef, ST, STRef, readSTRef, newSTRef)
+import Data.BooleanAlgebra (class BooleanAlgebra)
+import Data.Map (Map)
 import Data.Traversable (all)
+import Data.Tuple (snd, Tuple(Tuple), fst)
 import Graphics.Canvas (CANVAS, Context2D, fillRect, setFillStyle)
 import Point (Point, point)
 import Tetrominos (Tetromino, rotateTetromino, drawTetromino, tetrominoL, points)
+
+
+type Color = String
 
 
 type GameSettings = 
@@ -29,6 +36,7 @@ type GameSettings =
 data GameState s =
     GameState
         { fallingTetromino :: STRef s FallingTetromino
+        , occupied :: Map Point Color
         , settings :: GameSettings
         }
 
@@ -42,7 +50,7 @@ type FallingTetromino =
 initializeGame :: forall e s. GameSettings -> Eff ( st :: ST s | e) (GameState s)                   
 initializeGame sets = do
   tetr <- newSTRef { tetromino: tetrominoL, coord: point 5 (-2) }
-  pure $ GameState { fallingTetromino: tetr, settings: sets }
+  pure $ GameState { fallingTetromino: tetr, settings: sets, occupied: Map.empty }
 
 
 updateFallingBlock :: forall s e . GameState s -> (FallingTetromino -> FallingTetromino) -> Eff (st :: ST s | e) Unit
@@ -60,10 +68,14 @@ isValid settings ftetr =
     all (insideBounds settings) (points ftetr.coord ftetr.tetromino)
 
 
+isOccupied :: forall s. GameState s -> Point -> Boolean
+isOccupied (GameState gameState) pt = 
+    Map.member pt gameState.occupied
+
 insideBounds :: GameSettings -> Point -> Boolean
-insideBounds { rows: r, cols: c } pt = 
-    pt.x >= 0 && pt.x < c &&
-    pt.y < r    
+insideBounds { rows: r, cols: c } (Tuple x y) = 
+    x >= 0 && x < c &&
+    y < r    
 
 
 drawGame :: forall e s. Context2D -> GameState s -> Eff (canvas :: CANVAS, st :: ST s | e) Unit
@@ -77,7 +89,7 @@ drawGame ctx (GameState game) = do
 
 drop :: FallingTetromino -> FallingTetromino
 drop fblock = 
-  fblock { coord = fblock.coord { y = fblock.coord.y + 1 } }
+  fblock { coord = Tuple (fst fblock.coord) (snd fblock.coord + 1) }
 
 
 rotate :: FallingTetromino -> FallingTetromino
@@ -87,12 +99,12 @@ rotate ftetr =
 
 moveRight :: FallingTetromino -> FallingTetromino
 moveRight fblock = 
-  fblock { coord = fblock.coord { x = fblock.coord.x + 1 } }
+  fblock { coord = Tuple (fst fblock.coord + 1) (snd fblock.coord) }
 
 
 moveLeft :: FallingTetromino -> FallingTetromino
 moveLeft fblock =
-  fblock { coord = fblock.coord { x = fblock.coord.x - 1 } }
+  fblock { coord = Tuple (fst fblock.coord - 1) (snd fblock.coord) }
 
 
 drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
