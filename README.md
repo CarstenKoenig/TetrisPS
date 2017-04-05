@@ -21,3 +21,10 @@ Assuming you have **Purescript**, **bower** and **pulp** installed
 - build the JavaScript `pulp build -O --to ./dist/tetris.js`
 - open `./html/index.html` into your browser (for example `chromium-browser ./html/index.html`)
 - **have fun**
+
+## Controls
+it's played using the arrow keys on:
+
+- left-/right-arrow to move left/right
+- down-arrow to descend faster (one step per key-down)
+- up-arrow to rotate the tetromino by 90° clockwise
