@@ -6,6 +6,7 @@ module Tetrominos
     , tetrominoT
     , tetrominoO
     , points
+    , drawBlock
     )
 where
 
@@ -51,6 +52,7 @@ points :: Point -> Tetromino -> Array Point
 points pt tetr =
     map (toPoint <<< translate (fromPoint pt)) tetr.blocks
 
+
 rotateTetromino :: Tetromino -> Tetromino
 rotateTetromino tetr =
   tetr { blocks = rotate90at tetr.center <$> tetr.blocks  }
@@ -59,17 +61,17 @@ drawTetromino :: forall e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CA
 drawTetromino ctx pt tetr = do
     setStrokeStyle "#000000" ctx
     setLineWidth 0.1 ctx
-    setFillStyle tetr.color ctx
-    for_ tetr.blocks (drawBlock ctx pt)
+    for_ (points pt tetr) (drawBlock ctx tetr.color)
     pure unit
 
-drawBlock :: forall e. Context2D -> Point -> Coord -> Eff ( canvas :: CANVAS | e ) Unit               
-drawBlock ctx pt (Coord bx by) = do
+drawBlock :: forall e. Context2D -> String -> Point -> Eff ( canvas :: CANVAS | e ) Unit               
+drawBlock ctx col pt = do
+    setFillStyle col ctx
     strokePath ctx $
     fillPath ctx $ 
     rect ctx
-        { x: toNumber (fst pt) + bx
-        , y: toNumber (snd pt) + by
+        { x: toNumber (fst pt)
+        , y: toNumber (snd pt)
         , w: 1.0
         , h: 1.0
         }

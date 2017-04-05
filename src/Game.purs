@@ -17,12 +17,13 @@ import Prelude
 import Data.Map as Map
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Random (RANDOM, randomInt)
+import Data.Foldable (for_, foldl)
 import Data.Map (Map)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
-import Graphics.Canvas (CANVAS, Context2D, fillRect, setFillStyle)
+import Graphics.Canvas (setLineWidth, setStrokeStyle, CANVAS, Context2D, fillRect, setFillStyle)
 import Point (Point, point)
-import Tetrominos (Tetromino, drawTetromino, points, rotateTetromino, tetrominoL, tetrominoO, tetrominoT)
+import Tetrominos (Tetromino, drawTetromino, drawBlock, points, rotateTetromino, tetrominoL, tetrominoO, tetrominoT)
 
 
 type Color = String
@@ -72,12 +73,21 @@ updateFalling gamestate = do
         then
             pure $ gamestate { fallingTetromino = dropped }
         else do 
-            gamestate' <- initNewFalling gamestate 
-            pure $ stopFalling gamestate'
+            initNewFalling $ stopFalling gamestate 
             
 
 stopFalling :: GameState -> GameState
-stopFalling gs = gs
+stopFalling gs =
+    let occ' = insertOccupiedTetromino gs.fallingTetromino gs.occupied
+    in gs { occupied = occ' }
+
+
+insertOccupiedTetromino :: FallingTetromino -> Map Point Color -> Map Point Color 
+insertOccupiedTetromino ftetr map = 
+    foldl (flip ins) map $ points ftetr.coord ftetr.tetromino
+    where
+        ins pt = 
+            Map.insert pt ftetr.tetromino.color
 
 
 initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
@@ -123,6 +133,7 @@ drawGame :: forall e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
 drawGame ctx gamestate = do
   setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
+  drawOccupied ctx gamestate.occupied
   let ftetr = gamestate.fallingTetromino
   drawFalling ctx ftetr
 
@@ -151,3 +162,11 @@ drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS
 drawFalling ctx ftetr =
     drawTetromino ctx ftetr.coord ftetr.tetromino
 
+
+drawOccupied :: forall e. Context2D -> Map Point Color -> Eff ( canvas :: CANVAS | e ) Unit               
+drawOccupied ctx occ = do
+    let blocks = Map.toList occ
+    setStrokeStyle "#000000" ctx
+    setLineWidth 0.1 ctx
+    for_ blocks (\ tpl -> drawBlock ctx (snd tpl) (fst tpl))
+    pure unit
