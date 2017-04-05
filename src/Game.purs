@@ -13,15 +13,20 @@ module Game
 where
 
 import Prelude
+import Data.List as List
 import Data.Map as Map
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Foldable (for_, foldl)
+import Data.List (sortBy, List, filter)
 import Data.Map (Map)
+import Data.Maybe (Maybe(Nothing, Just))
+import Data.Ord (compare)
+import Data.Ordering (invert)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
 import Graphics.Canvas (setLineWidth, setStrokeStyle, CANVAS, Context2D, fillRect, setFillStyle)
-import Point (Point)
+import Point (point, Point)
 import Tetrominos (FallingTetromino, drawBlock, drawTetromino, rotateTetromino, points, randomTetromino)
 
 
@@ -73,7 +78,8 @@ updateFalling gamestate = do
 stopFalling :: GameState -> GameState
 stopFalling gs =
     let occ' = insertOccupiedTetromino gs.fallingTetromino gs.occupied
-    in gs { occupied = occ' }
+        occ'' = popFullyOccupiedRows gs.settings.rows gs.settings.cols occ'
+    in gs { occupied = occ'' }
 
 
 insertOccupiedTetromino :: FallingTetromino -> Map Point Color -> Map Point Color 
@@ -150,3 +156,50 @@ drawOccupied ctx occ = do
     setLineWidth 0.1 ctx
     for_ blocks (\ tpl -> drawBlock ctx (snd tpl) (fst tpl))
     pure unit
+
+
+popFullyOccupiedRows :: Int -> Int -> Map Point Color -> Map Point Color 
+popFullyOccupiedRows rows cols occ = 
+    foldl pop occ rs 
+    where
+        pop m r = popRow r m 
+        rs = fullyOccupiedRows rows cols occ
+
+
+fullyOccupiedRows :: Int -> Int -> Map Point Color -> List Int 
+fullyOccupiedRows rows cols occ = 
+    List.filter (isFullyOccupied cols occ) $ List.reverse $ List.range 0 (rows - 1)
+
+
+isFullyOccupied :: Int -> Map Point Color -> Int -> Boolean 
+isFullyOccupied cols occ row = 
+    List.length keys == cols 
+    where 
+        keys = filter (\pt -> snd pt == row) $ Map.keys occ
+
+
+popRow :: Int -> Map Point Color -> Map Point Color 
+popRow row = 
+    mapDown row <<< removeRow row
+
+
+removeRow :: Int -> Map Point Color -> Map Point Color
+removeRow row occ =
+    foldl rem occ keys 
+    where 
+        rem m pt = Map.delete pt m 
+        keys = filter (\pt -> snd pt == row) $ Map.keys occ
+
+
+mapDown :: Int -> Map Point Color -> Map Point Color
+mapDown above occ = 
+    foldl mapD occ keys 
+    where 
+        mapD m pt = 
+            let pt' = point (fst pt) (snd pt + 1) 
+            in case Map.pop pt m of 
+                Just tpl -> Map.insert pt' (fst tpl) (snd tpl)
+                Nothing -> m
+        keys = List.sortBy cmpSnd $ filter (\pt -> snd pt < above) $ Map.keys occ
+        cmpSnd ptA ptB = invert $ compare (snd ptA) (snd ptB)
+
