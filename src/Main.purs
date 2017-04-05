@@ -43,7 +43,7 @@ getGameState state =
 main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM , console :: CONSOLE, random :: RANDOM | e) Unit
 main = void $ unsafePartial do
     let settings = { rows: 20, cols: 12}
-    let game = initializeGame settings
+    game <- initializeGame settings
     state <- newSTRef game
     Just canvas <- getCanvasElementById "canvas"
     ctx <- getContext2D canvas

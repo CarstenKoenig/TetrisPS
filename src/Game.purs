@@ -47,10 +47,10 @@ type FallingTetromino =
   }
 
 
-initializeGame :: GameSettings -> GameState
+initializeGame :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
 initializeGame sets = do
-    let ftetr = { tetromino: tetrominoL, coord: point 5 (-2) }
-    { fallingTetromino: ftetr, occupied: (Map.empty :: Map Point Color), settings: sets }
+    ftetr <- randomTetromino
+    pure $ { fallingTetromino: ftetr, occupied: (Map.empty :: Map Point Color), settings: sets }
 
 
 updateMovingBlock :: (FallingTetromino -> FallingTetromino) -> GameState -> GameState
