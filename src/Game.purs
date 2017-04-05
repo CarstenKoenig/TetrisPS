@@ -163,7 +163,7 @@ popFullyOccupiedRows rows cols occ =
     foldl pop occ rs 
     where
         pop m r = popRow r m 
-        rs = fullyOccupiedRows rows cols occ
+        rs = List.zipWith (+) (List.range 0 rows) (fullyOccupiedRows rows cols occ)
 
 
 fullyOccupiedRows :: Int -> Int -> Map Point Color -> List Int 
