@@ -1,7 +1,6 @@
 module Game 
     ( GameState
     , GameSettings
-    , FallingTetromino 
     , Color
     , initializeGame
     , updateMovingBlock
@@ -16,14 +15,14 @@ where
 import Prelude
 import Data.Map as Map
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Random (RANDOM, randomInt)
+import Control.Monad.Eff.Random (RANDOM)
 import Data.Foldable (for_, foldl)
 import Data.Map (Map)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
 import Graphics.Canvas (setLineWidth, setStrokeStyle, CANVAS, Context2D, fillRect, setFillStyle)
-import Point (Point, point)
-import Tetrominos (Tetromino, drawTetromino, drawBlock, points, rotateTetromino, tetrominoL, tetrominoO, tetrominoT)
+import Point (Point)
+import Tetrominos (FallingTetromino, drawBlock, drawTetromino, rotateTetromino, points, randomTetromino)
 
 
 type Color = String
@@ -40,11 +39,6 @@ type GameState =
     , settings :: GameSettings
     }
 
-
-type FallingTetromino = 
-  { tetromino :: Tetromino
-  , coord :: Point
-  }
 
 
 initializeGame :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
@@ -94,20 +88,6 @@ initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
 initNewFalling gamestate = do
     ftetr <- randomTetromino
     pure $ gamestate { fallingTetromino = ftetr }
-
-
-randomTetromino :: forall e. Eff (random :: RANDOM | e) FallingTetromino
-randomTetromino = do 
-    n <- randomInt 1 3
-    pure $ selectTetromino n
-
-
-selectTetromino :: Int -> FallingTetromino
-selectTetromino nr = 
-    case nr of 
-        1 -> { tetromino: tetrominoL, coord: point 5 (-2) }
-        2 -> { tetromino: tetrominoT, coord: point 5 (-1) }
-        _ -> { tetromino: tetrominoO, coord: point 5 (-1) }
 
 
 isValid :: GameState -> FallingTetromino ->  Boolean
