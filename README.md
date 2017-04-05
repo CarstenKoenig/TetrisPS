@@ -2,6 +2,8 @@
 
 Tetris in Purescript using a Canvas
 
+![tetris](./tetris.jpg)
+
 ## progress
 The basic game is playable but it's lacking:
 
