@@ -7,7 +7,7 @@ Tetris in Purescript using a Canvas
 ## progress
 The basic game is playable but it's lacking:
 
-- [ ] Score
+- [x] Score
 - [ ] Game-Over detection
 - [ ] speed up during gameplay
 - [ ] way to restart the game
