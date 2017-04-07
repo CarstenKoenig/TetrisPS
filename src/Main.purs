@@ -13,18 +13,14 @@ import DOM.Event.EventTarget (eventListener, addEventListener)
 import DOM.Event.KeyboardEvent (code, eventToKeyboardEvent)
 import DOM.Event.Types (EventType(EventType))
 import DOM.HTML (window)
-import DOM.HTML.Document (body)
 import DOM.HTML.Types (windowToEventTarget)
-import DOM.HTML.Window (document)
-import DOM.Node.NonElementParentNode (getElementById)
-import DOM.Node.Types (ElementId(..))
 import Data.Either (Either(Right))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
 import Game (GameState, GameSettings, moveLeft, moveRight, rotate, drawGame, initializeGame, updateMovingBlock, updateFalling)
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
+import JQuery (setScore, showGameOver)
 import Partial.Unsafe (unsafePartial)
-import JQuery(setScore)
 
 type State s = STRef s GameState
 
@@ -36,8 +32,11 @@ updateGame update state =
 updateGame' :: forall e s. (GameState -> Eff (random :: RANDOM, st :: ST s | e) GameState) -> State s -> Eff (st :: ST s, random :: RANDOM | e) GameState
 updateGame' update state = do 
   game <- readSTRef state 
-  game' <- update game 
-  writeSTRef state game'
+  if game.gameOver 
+    then pure game
+    else do
+      game' <- update game 
+      writeSTRef state game'
 
 
 getGameState :: forall e s. State s -> Eff (st :: ST s | e) GameState 
@@ -71,6 +70,7 @@ loop :: forall e s. Context2D -> State s -> Eff (st :: ST s, random :: RANDOM, c
 loop ctx state = do
   game <- updateGame' updateFalling state
   drawGame ctx game
+  showGameOver game.gameOver
   setScore $ show game.score
 
 
@@ -85,7 +85,7 @@ initializeInput ctx state = do
   pure unit
 
 
-onKeyPress :: forall eff s. Context2D -> State s -> Event -> Eff ( st :: ST s, random :: RANDOM, canvas :: CANVAS| eff) Unit
+onKeyPress :: forall eff s. Context2D -> State s -> Event -> Eff ( st :: ST s, random :: RANDOM, canvas :: CANVAS, dom :: DOM | eff) Unit
 onKeyPress ctx state event = do
 
   case map code (runExcept (eventToKeyboardEvent event)) of

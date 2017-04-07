@@ -8,7 +8,7 @@ Tetris in Purescript using a Canvas
 The basic game is playable but it's lacking:
 
 - [x] Score
-- [ ] Game-Over detection
+- [x] Game-Over detection
 - [ ] speed up during gameplay
 - [ ] way to restart the game
 - [ ] maybe the bouncing of the wall behavior when rotating near obstacles (right now tetrominos won't rotate when they end up in invalid places)

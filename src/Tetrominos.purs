@@ -99,7 +99,7 @@ selectTetromino nr =
     case nr of 
         1 -> { tetromino: tetrominoL, coord: point 5 (-2) }
         2 -> { tetromino: tetrominoT, coord: point 5 (-1) }
-        3 -> { tetromino: tetrominoJ, coord: point 6 (-1) }
+        3 -> { tetromino: tetrominoJ, coord: point 5 (-1) }
         4 -> { tetromino: tetrominoI, coord: point 5 (-3) }
         5 -> { tetromino: tetrominoS, coord: point 5 (-1) }
         6 -> { tetromino: tetrominoZ, coord: point 5 (-1) }

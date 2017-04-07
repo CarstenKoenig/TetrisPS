@@ -21,7 +21,7 @@ import Control.Monad.Eff.Random (RANDOM)
 import Data.Foldable (for_, foldl)
 import Data.List (List, filter)
 import Data.Map (Map)
-import Data.Maybe (Maybe(Nothing, Just))
+import Data.Maybe (Maybe(..))
 import Data.Ordering (invert)
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
@@ -43,7 +43,8 @@ type GameState =
     { fallingTetromino :: FallingTetromino
     , occupied :: Map Point Color
     , settings :: GameSettings
-    , score :: Score 
+    , score :: Score
+    , gameOver :: Boolean 
     }
 
 
@@ -56,6 +57,7 @@ initializeGame sets = do
         , occupied: (Map.empty :: Map Point Color)
         , settings: sets 
         , score: 0
+        , gameOver: false
         }
 
 
@@ -82,8 +84,8 @@ updateFalling gamestate = do
     if valid
         then
             pure $ gamestate { fallingTetromino = dropped }
-        else do 
-            initNewFalling $ stopFalling gamestate 
+        else do
+            initNewFalling $ stopFalling gamestate
             
 
 stopFalling :: GameState -> GameState
@@ -105,7 +107,10 @@ insertOccupiedTetromino ftetr map =
 initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
 initNewFalling gamestate = do
     ftetr <- randomTetromino
-    pure $ gamestate { fallingTetromino = ftetr }
+    let gamestate' = gamestate { fallingTetromino = ftetr }
+    pure $ if not (isValid gamestate' ftetr) 
+        then gamestate { gameOver = true }
+        else gamestate'
 
 
 isValid :: GameState -> FallingTetromino ->  Boolean
@@ -132,8 +137,12 @@ drawGame ctx gamestate = do
   setFillStyle "#03101A" ctx
   fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
   drawOccupied ctx gamestate.occupied
-  let ftetr = gamestate.fallingTetromino
-  drawFalling ctx ftetr
+  if not gamestate.gameOver 
+    then do
+        let ftetr = gamestate.fallingTetromino
+        drawFalling ctx ftetr
+    else
+        pure unit
 
 
 drop :: FallingTetromino -> FallingTetromino
