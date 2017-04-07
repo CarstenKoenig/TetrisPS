@@ -2,6 +2,7 @@ module Game
     ( GameState
     , GameSettings
     , Color
+    , Score
     , initializeGame
     , updateMovingBlock
     , updateFalling
@@ -30,6 +31,7 @@ import Tetrominos (FallingTetromino, drawBlock, drawTetromino, rotateTetromino, 
 
 
 type Color = String
+type Score = Int
 
 
 type GameSettings = 
@@ -41,6 +43,7 @@ type GameState =
     { fallingTetromino :: FallingTetromino
     , occupied :: Map Point Color
     , settings :: GameSettings
+    , score :: Score 
     }
 
 
@@ -48,7 +51,16 @@ type GameState =
 initializeGame :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
 initializeGame sets = do
     ftetr <- randomTetromino
-    pure $ { fallingTetromino: ftetr, occupied: (Map.empty :: Map Point Color), settings: sets }
+    pure $ 
+        { fallingTetromino: ftetr
+        , occupied: (Map.empty :: Map Point Color)
+        , settings: sets 
+        , score: 0
+        }
+
+
+scorePerRows :: Int -> Score 
+scorePerRows n = 5 * n * (n+1)
 
 
 updateMovingBlock :: (FallingTetromino -> FallingTetromino) -> GameState -> GameState
@@ -77,8 +89,9 @@ updateFalling gamestate = do
 stopFalling :: GameState -> GameState
 stopFalling gs =
     let occ' = insertOccupiedTetromino gs.fallingTetromino gs.occupied
-        occ'' = popFullyOccupiedRows gs.settings.rows gs.settings.cols occ'
-    in gs { occupied = occ'' }
+        scoreAndOcc = popFullyOccupiedRows gs.settings.rows gs.settings.cols occ'
+    in gs { occupied = snd scoreAndOcc
+          , score = gs.score + fst scoreAndOcc }
 
 
 insertOccupiedTetromino :: FallingTetromino -> Map Point Color -> Map Point Color 
@@ -157,12 +170,14 @@ drawOccupied ctx occ = do
     pure unit
 
 
-popFullyOccupiedRows :: Int -> Int -> Map Point Color -> Map Point Color 
+popFullyOccupiedRows :: Int -> Int -> Map Point Color -> Tuple Score (Map Point Color)
 popFullyOccupiedRows rows cols occ = 
-    foldl pop occ rs 
+    Tuple score $ foldl pop occ rs 
     where
+        score = scorePerRows $ List.length fullRows
+        fullRows = fullyOccupiedRows rows cols occ
         pop m r = popRow r m 
-        rs = List.zipWith (+) (List.range 0 rows) (fullyOccupiedRows rows cols occ)
+        rs = List.zipWith (+) (List.range 0 rows) fullRows
 
 
 fullyOccupiedRows :: Int -> Int -> Map Point Color -> List Int 
