@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, logShow)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Timer (IntervalId, TIMER, setInterval)
 import Control.Monad.Except (runExcept)
@@ -17,10 +17,14 @@ import DOM.HTML.Types (windowToEventTarget)
 import Data.Either (Either(Right))
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(Just))
+import Data.Tuple (Tuple(..), fst)
 import Game (GameState, GameSettings, moveLeft, moveRight, rotate, drawGame, initializeGame, updateMovingBlock, updateFalling)
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
 import JQuery (setScore, showGameOver)
+import Math (abs)
 import Partial.Unsafe (unsafePartial)
+import Signal (foldp, runSignal, (~>))
+import Signal.DOM (animationFrame)
 
 type State s = STRef s GameState
 
@@ -61,8 +65,12 @@ main = void $ unsafePartial do
 
 
 
-initializeLoop :: forall e s. Context2D -> State s -> Eff (timer :: TIMER, st :: ST s, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) IntervalId
+initializeLoop :: forall e s. Context2D -> State s -> Eff (console :: CONSOLE, timer :: TIMER, st :: ST s, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) IntervalId
 initializeLoop ctx state = do
+  animFrameSignal <- animationFrame
+  let diffSignal = foldp (\ n (Tuple _ l) -> Tuple (abs $ n-l) n) (Tuple 0.0 0.0) animFrameSignal ~> fst
+      logSignal = diffSignal ~> logShow
+  runSignal logSignal
   setInterval 1500 (loop ctx state)
 
 
