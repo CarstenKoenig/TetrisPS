@@ -57,7 +57,7 @@ main = void $ unsafePartial do
     ctx <- getContext2D canvas
 
     scaling <- calculateScaling settings canvas
-    scale scaling ctx
+    _ <- scale scaling ctx
 
     initializeInput ctx state
     loopId <- initializeLoop ctx state

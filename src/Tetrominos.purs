@@ -110,16 +110,16 @@ selectTetromino nr =
 
 drawTetromino :: forall e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CANVAS | e ) Unit               
 drawTetromino ctx pt tetr = do
-    setStrokeStyle "#000000" ctx
-    setLineWidth 0.1 ctx
+    _ <- setStrokeStyle "#000000" ctx
+    _ <- setLineWidth 0.1 ctx
     for_ (points pt tetr) (drawBlock ctx tetr.color)
     pure unit
 
 
 drawBlock :: forall e. Context2D -> String -> Point -> Eff ( canvas :: CANVAS | e ) Unit               
 drawBlock ctx col pt = do
-    setFillStyle col ctx
-    strokePath ctx $
+    _ <- setFillStyle col ctx
+    _ <- strokePath ctx $
     fillPath ctx $ 
     rect ctx
         { x: toNumber (fst pt)

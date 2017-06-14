@@ -134,8 +134,8 @@ insideBounds { rows: r, cols: c } (Tuple x y) =
 
 drawGame :: forall e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
 drawGame ctx gamestate = do
-  setFillStyle "#03101A" ctx
-  fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
+  _ <- setFillStyle "#03101A" ctx
+  _ <- fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
   drawOccupied ctx gamestate.occupied
   if not gamestate.gameOver 
     then do
@@ -172,9 +172,9 @@ drawFalling ctx ftetr =
 
 drawOccupied :: forall e. Context2D -> Map Point Color -> Eff ( canvas :: CANVAS | e ) Unit               
 drawOccupied ctx occ = do
-    let blocks = Map.toList occ
-    setStrokeStyle "#000000" ctx
-    setLineWidth 0.1 ctx
+    let blocks = Map.toUnfoldable occ :: List (Tuple Point Color)
+    _ <- setStrokeStyle "#000000" ctx
+    _ <- setLineWidth 0.1 ctx
     for_ blocks (\ tpl -> drawBlock ctx (snd tpl) (fst tpl))
     pure unit
 
