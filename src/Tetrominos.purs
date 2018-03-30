@@ -1,34 +1,32 @@
 module Tetrominos 
     ( Tetromino
-    , FallingTetromino
     , rotateTetromino 
     , drawTetromino
-    , randomTetromino
     , points
     , drawBlock
+    , tetrominoI
+    , tetrominoJ
+    , tetrominoL
+    , tetrominoO
+    , tetrominoS
+    , tetrominoT
+    , tetrominoZ
     )
 where
 
 import Prelude
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Random (randomInt, RANDOM)
 import Data.Int (toNumber)
 import Data.Traversable (for_)
 import Data.Tuple (snd, fst)
 import Graphics.Canvas (setFillStyle, setLineWidth, setStrokeStyle, CANVAS, Context2D, rect, fillPath, strokePath)
-import Point (point, Point, Coord(..), rotate90at, toPoint, fromPoint, translate)
+import Point (Coord(Coord), Point, fromPoint, rotate90at, toPoint, translate)
 
 
 type Tetromino =
   { blocks :: Array Coord
   , color :: String
   , center :: Coord
-  }
-
-
-type FallingTetromino = 
-  { tetromino :: Tetromino
-  , coord :: Point
   }
 
 
@@ -86,26 +84,6 @@ points pt tetr =
 rotateTetromino :: Tetromino -> Tetromino
 rotateTetromino tetr =
   tetr { blocks = rotate90at tetr.center <$> tetr.blocks  }
-
-
-randomTetromino :: forall e. Eff (random :: RANDOM | e) FallingTetromino
-randomTetromino = do 
-    n <- randomInt 1 7
-    pure $ selectTetromino n
-
-
-selectTetromino :: Int -> FallingTetromino
-selectTetromino nr = 
-    case nr of 
-        1 -> { tetromino: tetrominoL, coord: point 5 (-2) }
-        2 -> { tetromino: tetrominoT, coord: point 5 (-1) }
-        3 -> { tetromino: tetrominoJ, coord: point 5 (-1) }
-        4 -> { tetromino: tetrominoI, coord: point 5 (-3) }
-        5 -> { tetromino: tetrominoS, coord: point 5 (-1) }
-        6 -> { tetromino: tetrominoZ, coord: point 5 (-1) }
-        _ -> { tetromino: tetrominoO, coord: point 5 (-1) }
-
-
 
 
 drawTetromino :: forall e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CANVAS | e ) Unit               

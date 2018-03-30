@@ -1,33 +1,34 @@
 module Game 
     ( GameState
     , GameSettings
+    , Message (..)
     , Color
     , Score
     , initializeGame
-    , updateMovingBlock
-    , updateFalling
+    , update
     , drawGame 
-    , rotate 
-    , moveRight 
-    , moveLeft
     )
 where
 
 import Prelude
-import Data.List as List
-import Data.Map as Map
+
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Foldable (for_, foldl)
 import Data.List (List, filter)
+import Data.List as List
 import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Ordering (invert)
+import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (all)
 import Data.Tuple (snd, Tuple(Tuple), fst)
+import Falling (FallingTetromino)
+import Falling as F
 import Graphics.Canvas (setLineWidth, setStrokeStyle, CANVAS, Context2D, fillRect, setFillStyle)
 import Point (point, Point)
-import Tetrominos (FallingTetromino, drawBlock, drawTetromino, rotateTetromino, points, randomTetromino)
+import Tetrominos (drawBlock, points)
 
 
 type Color = String
@@ -37,6 +38,7 @@ type Score = Int
 type GameSettings = 
     { rows :: Int
     , cols :: Int
+    , initialSpeed :: Milliseconds
     }
 
 type GameState =
@@ -45,24 +47,48 @@ type GameState =
     , settings :: GameSettings
     , score :: Score
     , gameOver :: Boolean 
+    , speed :: Milliseconds
+    , fallIn :: Milliseconds
     }
+
+
+data Message
+    = Ticked Milliseconds
+    | MoveDown 
+    | MoveLeft 
+    | MoveRight
+    | Rotate
 
 
 
 initializeGame :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
 initializeGame sets = do
-    ftetr <- randomTetromino
+    ftetr <- F.random
     pure $ 
         { fallingTetromino: ftetr
-        , occupied: (Map.empty :: Map Point Color)
+        , occupied: Map.empty
         , settings: sets 
         , score: 0
         , gameOver: false
+        , speed: sets.initialSpeed
+        , fallIn: sets.initialSpeed
         }
 
 
 scorePerRows :: Int -> Score 
 scorePerRows n = 5 * n * (n+1)
+
+
+update :: forall e. Message -> GameState -> Eff (random :: RANDOM | e) GameState
+update MoveDown   gamestate = pure $ updateMovingBlock F.drop gamestate
+update MoveLeft   gamestate = pure $ updateMovingBlock F.moveLeft gamestate
+update MoveRight  gamestate = pure $ updateMovingBlock F.moveRight gamestate
+update Rotate     gamestate = pure $ updateMovingBlock F.rotate gamestate
+update (Ticked d) gamestate = do
+    let remaining = gamestate.fallIn - d
+    if remaining > Milliseconds 0.0 
+        then pure $ gamestate { fallIn = remaining }
+        else updateFalling gamestate
 
 
 updateMovingBlock :: (FallingTetromino -> FallingTetromino) -> GameState -> GameState
@@ -79,11 +105,13 @@ updateMovingBlock update gamestate =
 updateFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
 updateFalling gamestate = do
     let falling = gamestate.fallingTetromino
-        dropped = drop falling
+        dropped = F.drop falling
         valid = isValid gamestate dropped
     if valid
         then
-            pure $ gamestate { fallingTetromino = dropped }
+            pure $ gamestate { fallingTetromino = dropped 
+                             , fallIn = gamestate.speed
+                             }
         else do
             initNewFalling $ stopFalling gamestate
             
@@ -106,8 +134,11 @@ insertOccupiedTetromino ftetr map =
 
 initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
 initNewFalling gamestate = do
-    ftetr <- randomTetromino
-    let gamestate' = gamestate { fallingTetromino = ftetr }
+    ftetr <- F.random
+    let gamestate' = gamestate { fallingTetromino = ftetr 
+                               , speed = gamestate.speed * Milliseconds 0.95
+                               , fallIn = gamestate.speed
+                               }
     pure $ if not (isValid gamestate' ftetr) 
         then gamestate { gameOver = true }
         else gamestate'
@@ -140,34 +171,9 @@ drawGame ctx gamestate = do
   if not gamestate.gameOver 
     then do
         let ftetr = gamestate.fallingTetromino
-        drawFalling ctx ftetr
+        F.draw ctx ftetr
     else
         pure unit
-
-
-drop :: FallingTetromino -> FallingTetromino
-drop fblock = 
-  fblock { coord = Tuple (fst fblock.coord) (snd fblock.coord + 1) }
-
-
-rotate :: FallingTetromino -> FallingTetromino
-rotate ftetr =
-  ftetr { tetromino = rotateTetromino ftetr.tetromino } 
-
-
-moveRight :: FallingTetromino -> FallingTetromino
-moveRight fblock = 
-  fblock { coord = Tuple (fst fblock.coord + 1) (snd fblock.coord) }
-
-
-moveLeft :: FallingTetromino -> FallingTetromino
-moveLeft fblock =
-  fblock { coord = Tuple (fst fblock.coord - 1) (snd fblock.coord) }
-
-
-drawFalling :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
-drawFalling ctx ftetr =
-    drawTetromino ctx ftetr.coord ftetr.tetromino
 
 
 drawOccupied :: forall e. Context2D -> Map Point Color -> Eff ( canvas :: CANVAS | e ) Unit               
