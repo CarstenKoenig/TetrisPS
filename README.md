@@ -32,5 +32,6 @@ it's played using the arrow keys on:
 - up-arrow to rotate the tetromino by 90° clockwise
 
 ## Demo
+you can try the current state of the game here:
 
-[Demo](./docs/index.html)
+[Demo](https://carstenkoenig.github.io/TetrisPS/)
