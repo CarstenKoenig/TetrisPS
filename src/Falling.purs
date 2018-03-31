@@ -51,13 +51,13 @@ moveLeft fblock =
 
 
 -- | draws the tetromino into the canvas-context `ctx`
-draw :: forall e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
+draw :: ∀ e. Context2D -> FallingTetromino -> Eff ( canvas :: CANVAS | e ) Unit               
 draw ctx ftetr =
     drawTetromino ctx ftetr.coord ftetr.tetromino
 
 
 -- | creates a random falling tetromino just outside the top of the screen
-random :: forall e. Eff (random :: RANDOM | e) FallingTetromino
+random :: ∀ e. Eff (random :: RANDOM | e) FallingTetromino
 random = do 
     n <- randomInt 1 7
     pure $ select n

@@ -69,7 +69,7 @@ data Message
 
 
 -- | initializes the game wit a random falling tetromino
-initialize :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
+initialize :: ∀ e. GameSettings -> Eff (random :: RANDOM | e) GameState
 initialize sets = do
     ftetr <- F.random
     pure $ 
@@ -90,7 +90,7 @@ scorePerRows n = 5 * n * (n+1)
 
 -- | yields a updated `GameState` give a `Message`
 -- | when we need a new tetromino we need random-effects
-update :: forall e. Message -> GameState -> Eff (random :: RANDOM | e) GameState
+update :: ∀ e. Message -> GameState -> Eff (random :: RANDOM | e) GameState
 update ev gamestate =
     if gamestate.gameOver
         then pure gamestate
@@ -108,17 +108,17 @@ update ev gamestate =
 
 
 updateMovingBlock :: (FallingTetromino -> FallingTetromino) -> GameState -> GameState
-updateMovingBlock update gamestate =
+updateMovingBlock upd gamestate =
     let ftetr = update' gamestate.fallingTetromino
     in gamestate { fallingTetromino = ftetr }
     where 
         update' ftetr =
-            let ftetr' = update ftetr
+            let ftetr' = upd ftetr
                 valid = isValid gamestate ftetr'
             in if valid then ftetr' else ftetr
 
 
-updateFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
+updateFalling :: ∀ e. GameState -> Eff (random :: RANDOM | e) GameState
 updateFalling gamestate = do
     let falling = gamestate.fallingTetromino
         dropped = F.drop falling
@@ -148,7 +148,7 @@ insertOccupiedTetromino ftetr map =
             Map.insert pt ftetr.tetromino.color
 
 
-initNewFalling :: forall e. GameState -> Eff (random :: RANDOM | e) GameState
+initNewFalling :: ∀ e. GameState -> Eff (random :: RANDOM | e) GameState
 initNewFalling gamestate = do
     ftetr <- F.random
     let gamestate' = gamestate { fallingTetromino = ftetr 
@@ -180,7 +180,7 @@ insideBounds { rows: r, cols: c } (Tuple x y) =
 
 
 -- | draws the current `GameState` into the canvas-context `ctx`
-draw :: forall e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
+draw :: ∀ e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
 draw ctx gamestate = do
   _ <- setFillStyle "#03101A" ctx
   _ <- fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
@@ -193,7 +193,7 @@ draw ctx gamestate = do
         pure unit
 
 
-drawOccupied :: forall e. Context2D -> Map Point Color -> Eff ( canvas :: CANVAS | e ) Unit               
+drawOccupied :: ∀ e. Context2D -> Map Point Color -> Eff ( canvas :: CANVAS | e ) Unit               
 drawOccupied ctx occ = do
     let blocks = Map.toUnfoldable occ :: List (Tuple Point Color)
     _ <- setStrokeStyle "#000000" ctx

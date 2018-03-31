@@ -24,7 +24,7 @@ import SignalExt (foldEff)
 
 -- | this is the entry point into the app
 -- | we setup the canvas, settings and start the game loop
-main :: forall e. Eff ( canvas :: CANVAS, timer :: TIMER, dom :: DOM, random :: RANDOM | e) Unit
+main :: ∀ e. Eff ( canvas :: CANVAS, timer :: TIMER, dom :: DOM, random :: RANDOM | e) Unit
 main = void $ unsafePartial do
     Just canvas <- getCanvasElementById "canvas"
     ctx <- getContext2D canvas
@@ -42,7 +42,7 @@ main = void $ unsafePartial do
 -- | we are using `Signal` to map `animationFrame` and keyboard signals into
 -- | a `GameState`-signal using `Game.update`
 -- | finally we run this signal using `view`
-runGameLoop :: forall e. Context2D -> GameState -> Eff (timer :: TIMER, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) Unit
+runGameLoop :: ∀ e. Context2D -> GameState -> Eff (timer :: TIMER, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) Unit
 runGameLoop ctx initialGame = do
   gameSignal <- mkGameSignal
   runSignal $ view <$> gameSignal
@@ -76,7 +76,7 @@ runGameLoop ctx initialGame = do
 
 
 -- calculates a ScaleTransform so we can use 1pixel per block
-calculateScaling :: forall e. GameSettings -> CanvasElement          
+calculateScaling :: ∀ e. GameSettings -> CanvasElement          
         -> Eff ( canvas :: CANVAS | e) ScaleTransform               
 calculateScaling { rows: h, cols: w } canvas = do
   cW <- getCanvasWidth canvas

@@ -88,7 +88,7 @@ rotateTetromino tetr =
 
 
 -- | draws a `Tetromino` into a canvas context `ctx` at the point `pt`
-drawTetromino :: forall e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CANVAS | e ) Unit               
+drawTetromino :: ∀ e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CANVAS | e ) Unit               
 drawTetromino ctx pt tetr = do
     _ <- setStrokeStyle "#000000" ctx
     _ <- setLineWidth 0.1 ctx
@@ -107,7 +107,7 @@ points pt tetr =
 -- | context `ctx`
 -- | this functions assumes that the canvas was scaled so that a single
 -- | 1pt width and height point will represent the complete block
-drawBlock :: forall e. Context2D -> String -> Point -> Eff ( canvas :: CANVAS | e ) Unit               
+drawBlock :: ∀ e. Context2D -> String -> Point -> Eff ( canvas :: CANVAS | e ) Unit               
 drawBlock ctx col pt = do
     _ <- setFillStyle col ctx
     _ <- strokePath ctx $
