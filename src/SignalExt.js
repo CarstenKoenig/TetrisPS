@@ -1,5 +1,8 @@
 // module SignalExt
 
+// HACK:
+// need to reintroduce this as it's not exportet
+// from the signal module
 function make(initial) {
   var subs = [];
   var val = initial;
@@ -17,7 +20,8 @@ function make(initial) {
   return sig;
 };
 
-exports.foldM = function (fun) {
+
+exports.foldEff = function (fun) {
   return function (seed) {
     return function (sig) {
       return function () {
