@@ -33,4 +33,4 @@ it's played using the arrow keys on:
 
 ## Demo
 
-[Demo](./dist/index.html)
+[Demo](./docs/index.html)

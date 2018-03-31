@@ -3,6 +3,7 @@
 /.pulp-cache/
 /output/
 /.psci*
+/dist/
 /src/.webpack.js
 .psc-ide-port
 /.vscode/
