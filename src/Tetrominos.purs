@@ -23,6 +23,10 @@ import Graphics.Canvas (setFillStyle, setLineWidth, setStrokeStyle, CANVAS, Cont
 import Point (Coord(Coord), Point, fromPoint, rotate90at, toPoint, translate)
 
 
+-- | represents a (usually falling) Tetris-piece
+-- | the inlcudes `Coords` are not representing screen-coordinates
+-- | but relative positions that should be translated via it's center
+-- | to actual screen coordinates (see: `points` and `drawTetromino`)
 type Tetromino =
   { blocks :: Array Coord
   , color :: String
@@ -72,20 +76,18 @@ tetrominoZ =
   [ Coord (1.0) 0.0, Coord 0.0 0.0, Coord 0.0 1.0, Coord (-1.0) 1.0 ]
 
 
+-- | constructor function for a `Tetromino`
 mkTetromino :: String -> Coord -> Array Coord -> Tetromino
 mkTetromino col cen bls = { blocks: bls, color: col, center: cen }
 
 
-points :: Point -> Tetromino -> Array Point
-points pt tetr =
-    map (toPoint <<< translate (fromPoint pt)) tetr.blocks
-
-
+-- | rotates a `Tetromino` at counter-clockwise around it's center
 rotateTetromino :: Tetromino -> Tetromino
 rotateTetromino tetr =
   tetr { blocks = rotate90at tetr.center <$> tetr.blocks  }
 
 
+-- | draws a `Tetromino` into a canvas context `ctx` at the point `pt`
 drawTetromino :: forall e. Context2D -> Point -> Tetromino -> Eff ( canvas :: CANVAS | e ) Unit               
 drawTetromino ctx pt tetr = do
     _ <- setStrokeStyle "#000000" ctx
@@ -94,6 +96,17 @@ drawTetromino ctx pt tetr = do
     pure unit
 
 
+-- | get's all the coordinates a `Tetromino` occupies on screen
+-- | by translating the `Tetromino`s coords by `pt`
+points :: Point -> Tetromino -> Array Point
+points pt tetr =
+    map (toPoint <<< translate (fromPoint pt)) tetr.blocks
+
+
+-- | draws a *block* given by a color `col` and a `Point` `pt` into the canvas
+-- | context `ctx`
+-- | this functions assumes that the canvas was scaled so that a single
+-- | 1pt width and height point will represent the complete block
 drawBlock :: forall e. Context2D -> String -> Point -> Eff ( canvas :: CANVAS | e ) Unit               
 drawBlock ctx col pt = do
     _ <- setFillStyle col ctx

@@ -11,7 +11,8 @@ import Data.Maybe (Maybe(Just))
 import Data.NonEmpty (NonEmpty(..), foldl1)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst)
-import Game (GameSettings, GameState, Message(..), drawGame, initializeGame, update)
+import Game (GameSettings, GameState, Message(..))
+import Game as Game
 import Graphics.Canvas (ScaleTransform, CANVAS, CanvasElement, Context2D, getCanvasHeight, getCanvasWidth, scale, getContext2D, getCanvasElementById)
 import JQuery (setScore, showGameOver)
 import Math (abs)
@@ -21,7 +22,8 @@ import Signal.DOM (animationFrame, keyPressed)
 import SignalExt (foldEff)
 
 
-
+-- | this is the entry point into the app
+-- | we setup the canvas, settings and start the game loop
 main :: forall e. Eff ( canvas :: CANVAS, timer :: TIMER, dom :: DOM, random :: RANDOM | e) Unit
 main = void $ unsafePartial do
     Just canvas <- getCanvasElementById "canvas"
@@ -31,31 +33,29 @@ main = void $ unsafePartial do
     scaling <- calculateScaling settings canvas
     _ <- scale scaling ctx
 
-    game <- initializeGame settings
-    drawGame ctx game
+    game <- Game.initialize settings
+    Game.draw ctx game
     runGameLoop ctx game
 
 
 
+-- | we are using `Signal` to map `animationFrame` and keyboard signals into
+-- | a `GameState`-signal using `Game.update`
+-- | finally we run this signal using `view`
 runGameLoop :: forall e. Context2D -> GameState -> Eff (timer :: TIMER, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) Unit
 runGameLoop ctx initialGame = do
   gameSignal <- mkGameSignal
   runSignal $ view <$> gameSignal
 
   where
-    updateGame msg game = do 
-      if game.gameOver 
-        then pure game
-        else update msg game 
-
     view game = do
-      drawGame ctx game
+      Game.draw ctx game
       showGameOver game.gameOver
       setScore $ show game.score
 
     mkGameSignal = do
       sigs <- signals
-      foldEff updateGame initialGame sigs
+      foldEff Game.update initialGame sigs
 
     signals = do
       leftSignal  <- (\s -> s ~> onDown MoveLeft)  <$> keyPressed 37 

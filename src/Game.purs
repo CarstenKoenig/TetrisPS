@@ -4,9 +4,9 @@ module Game
     , Message (..)
     , Color
     , Score
-    , initializeGame
+    , initialize
     , update
-    , drawGame 
+    , draw
     )
 where
 
@@ -35,12 +35,18 @@ type Color = String
 type Score = Int
 
 
+-- | the basic GameSettings
+-- | `initialSpeed` is the time-period after which the very first tetromino drops
 type GameSettings = 
     { rows :: Int
     , cols :: Int
     , initialSpeed :: Milliseconds
     }
 
+-- | the state of the Game
+-- | after a `Tetromino` fell to the bottom it's copied into the static
+-- | occupied map - so there is really only one `Tetromino` at all times
+-- | `fallIn` indicates how long it should take till the tetromino will drop next
 type GameState =
     { fallingTetromino :: FallingTetromino
     , occupied :: Map Point Color
@@ -52,6 +58,8 @@ type GameState =
     }
 
 
+-- | these are the possible messages that will cause the
+-- | the GameState to change
 data Message
     = Ticked Milliseconds
     | MoveDown 
@@ -60,9 +68,9 @@ data Message
     | Rotate
 
 
-
-initializeGame :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
-initializeGame sets = do
+-- | initializes the game wit a random falling tetromino
+initialize :: forall e. GameSettings -> Eff (random :: RANDOM | e) GameState
+initialize sets = do
     ftetr <- F.random
     pure $ 
         { fallingTetromino: ftetr
@@ -75,20 +83,28 @@ initializeGame sets = do
         }
 
 
+-- | used to calculate the score-increase after `n` rows dissapeared
 scorePerRows :: Int -> Score 
 scorePerRows n = 5 * n * (n+1)
 
 
+-- | yields a updated `GameState` give a `Message`
+-- | when we need a new tetromino we need random-effects
 update :: forall e. Message -> GameState -> Eff (random :: RANDOM | e) GameState
-update MoveDown   gamestate = pure $ updateMovingBlock F.drop gamestate
-update MoveLeft   gamestate = pure $ updateMovingBlock F.moveLeft gamestate
-update MoveRight  gamestate = pure $ updateMovingBlock F.moveRight gamestate
-update Rotate     gamestate = pure $ updateMovingBlock F.rotate gamestate
-update (Ticked d) gamestate = do
-    let remaining = gamestate.fallIn - d
-    if remaining > Milliseconds 0.0 
-        then pure $ gamestate { fallIn = remaining }
-        else updateFalling gamestate
+update ev gamestate =
+    if gamestate.gameOver
+        then pure gamestate
+        else update' ev
+    where
+        update' MoveDown   = pure $ updateMovingBlock F.drop gamestate
+        update' MoveLeft   = pure $ updateMovingBlock F.moveLeft gamestate
+        update' MoveRight  = pure $ updateMovingBlock F.moveRight gamestate
+        update' Rotate     = pure $ updateMovingBlock F.rotate gamestate
+        update' (Ticked d) = do
+            let remaining = gamestate.fallIn - d
+            if remaining > Milliseconds 0.0 
+                then pure $ gamestate { fallIn = remaining }
+                else updateFalling gamestate
 
 
 updateMovingBlock :: (FallingTetromino -> FallingTetromino) -> GameState -> GameState
@@ -163,8 +179,9 @@ insideBounds { rows: r, cols: c } (Tuple x y) =
     y < r    
 
 
-drawGame :: forall e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
-drawGame ctx gamestate = do
+-- | draws the current `GameState` into the canvas-context `ctx`
+draw :: forall e. Context2D -> GameState -> Eff (canvas :: CANVAS | e) Unit
+draw ctx gamestate = do
   _ <- setFillStyle "#03101A" ctx
   _ <- fillRect ctx { x: 0.0, y: 0.0, w: 12.0, h: 20.0 }
   drawOccupied ctx gamestate.occupied
