@@ -30,3 +30,7 @@ it's played using the arrow keys on:
 - left-/right-arrow to move left/right
 - down-arrow to descend faster (one step per key-down)
 - up-arrow to rotate the tetromino by 90° clockwise
+
+## Demo
+
+[Demo](./dist/index.html)

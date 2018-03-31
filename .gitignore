@@ -4,6 +4,5 @@
 /output/
 /.psci*
 /src/.webpack.js
-/dist/
 .psc-ide-port
 /.vscode/
