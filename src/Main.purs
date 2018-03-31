@@ -3,7 +3,6 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Eff.Timer (TIMER)
 import Control.Monad.ST (ST, STRef, newSTRef, readSTRef, writeSTRef)
@@ -21,17 +20,15 @@ import Math (abs)
 import Partial.Unsafe (unsafePartial)
 import Signal (foldp, merge, runSignal, (~>))
 import Signal.DOM (animationFrame, keyPressed)
+import SignalExt (foldM)
 
 type State s = STRef s GameState
 
-updateGame :: forall e s. (GameState -> Eff (random :: RANDOM, st :: ST s | e) GameState) -> State s -> Eff (st :: ST s, random :: RANDOM | e) GameState
-updateGame update state = do 
-  game <- readSTRef state 
+updateGame :: forall e. (GameState -> Eff (random :: RANDOM | e) GameState) -> GameState -> Eff (random :: RANDOM | e) GameState
+updateGame update game = do 
   if game.gameOver 
     then pure game
-    else do
-      game' <- update game 
-      writeSTRef state game'
+    else update game 
 
 
 getGameState :: forall e s. State s -> Eff (st :: ST s | e) GameState 
@@ -39,7 +36,7 @@ getGameState state =
   readSTRef state
 
 
-main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM , console :: CONSOLE, random :: RANDOM | e) Unit
+main :: forall e s. Eff ( canvas :: CANVAS, st :: ST s, timer :: TIMER, dom :: DOM, random :: RANDOM | e) Unit
 main = void $ unsafePartial do
     let settings = { rows: 20, cols: 12, initialSpeed: Milliseconds 1000.0}
     game <- initializeGame settings
@@ -50,14 +47,13 @@ main = void $ unsafePartial do
     scaling <- calculateScaling settings canvas
     _ <- scale scaling ctx
 
-    initializeInput ctx state
-    loopId <- initializeLoop ctx state
     drawGame ctx game
+    initializeLoop ctx game
 
 
 
-initializeLoop :: forall e s. Context2D -> State s -> Eff (console :: CONSOLE, timer :: TIMER, st :: ST s, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) Unit
-initializeLoop ctx state = do
+initializeLoop :: forall e. Context2D -> GameState -> Eff (timer :: TIMER, canvas :: CANVAS, random :: RANDOM, dom :: DOM | e) Unit
+initializeLoop ctx initialGame = do
   animFrameSignal <- animationFrame
   leftSignal  <- (\s -> s ~> onDown MoveLeft)  <$> keyPressed 37 
   upSignal    <- (\s -> s ~> onDown Rotate)    <$> keyPressed 38
@@ -65,14 +61,13 @@ initializeLoop ctx state = do
   downSignal  <- (\s -> s ~> onDown MoveDown)  <$> keyPressed 40
   let tickSignal   = foldp (\ n (Tuple _ l) -> Tuple (abs $ n-l) n) (Tuple 0.0 0.0) animFrameSignal ~> Ticked <<< Milliseconds <<< fst
       signals      = foldl1 merge (NonEmpty tickSignal [leftSignal, upSignal, rightSignal, downSignal])
-      updateSignal = signals ~> upd
-  runSignal updateSignal
+  gameSignal  <- foldM upd initialGame signals
+  runSignal (view ctx <$> gameSignal)
   where
     onDown s true  = s
     onDown _ false = (Ticked $ Milliseconds 0.0)
-    upd msg = do
-      game <- updateGame (update msg) state
-      view ctx game
+    upd msg state = do
+      updateGame (update msg) state
       
 
 view :: forall e . Context2D -> GameState -> Eff (canvas :: CANVAS, dom :: DOM | e) Unit
@@ -80,12 +75,6 @@ view ctx game = do
   drawGame ctx game
   showGameOver game.gameOver
   setScore $ show game.score
-
-
-initializeInput :: forall s e. Context2D -> State s -> Eff ( dom :: DOM, st :: ST s, canvas :: CANVAS, random :: RANDOM | e) Unit
-initializeInput ctx state = do
-  w <- window
-  pure unit
 
 
 -- calculates a ScaleTransform so we can use 1pixel per block
