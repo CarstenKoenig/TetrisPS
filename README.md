@@ -21,7 +21,7 @@ Assuming you have **Purescript**, **bower** and **pulp** installed
 - `cd` into the folder
 - install dependencies with `bower install`
 - build the JavaScript `pulp build -O --to ./dist/tetris.js`
-- open `./html/index.html` into your browser (for example `chromium-browser ./html/index.html`)
+- open `./dist/index.html` into your browser (for example `chromium-browser ./dist/index.html`)
 - **have fun**
 
 ## Controls
